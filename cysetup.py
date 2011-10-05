@@ -7,6 +7,12 @@ except ImportError:
     print 'distutils is required to install this module. If you have pip installed, run: pip instal distutils'
     raise
 
+try:
+    from Cython.Distutils import build_ext
+except ImportError:
+    print 'Cython is required to install this module'
+    raise
+
 import os
 import glob
 
@@ -18,8 +24,8 @@ except IOError:
     readme_text = ''
 
 pyx_mods = [
-        Extension('codetalker.cgrammar', ['codetalker/cgrammar.c', 'codetalker/c/parser.c', 'codetalker/c/_speed_tokens.c'])
-]
+        Extension('codetalker.cgrammar', ['codetalker/cgrammar.pyx', 'codetalker/c/parser.c', 'codetalker/c/_speed_tokens.c'])
+    ]
 
 from test_cmd import test
 
@@ -41,7 +47,9 @@ setup(
             'test_dir':['tests/parse', 'tests/tokenize', 'tests/contrib']
         },
     },
-    cmdclass = {'test':test},
+    requires=['cython'],
+
+    cmdclass = {'build_ext': build_ext , 'test':test},
     ext_modules = pyx_mods,
     include_dirs = 'codetalker',
     packages = ['codetalker', 'codetalker.pgm', 'codetalker.contrib'],
