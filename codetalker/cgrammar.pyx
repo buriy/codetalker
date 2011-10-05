@@ -1,5 +1,5 @@
 # cython: profile=True
-from stdlib cimport malloc, free
+from libc.stdlib cimport malloc, free
 
 from codetalker.pgm.tokens import INDENT, DEDENT, EOF, Token as PyToken, ReToken
 from codetalker.pgm.errors import ParseError, TokenError, AstError
@@ -384,6 +384,7 @@ cdef TokenStream tokens_to_stream(Token* tokens):
         tmp = tmp.next
     ts.tokens = <Token*>malloc(sizeof(Token)*ts.num)
     ts.at = 0
+    cdef unsigned int i
     for i from 0<=i<ts.num:
         ts.tokens[i] = tokens[0]
         tokens = tokens.next
@@ -393,6 +394,7 @@ cdef Rules convert_rules(object rules):
     cdef Rules crules
     crules.num = len(rules)
     crules.rules = <Rule*>malloc(sizeof(Rule)*crules.num)
+    cdef unsigned int i
     for i from 0<=i<crules.num:
         crules.rules[i] = convert_rule(rules[i], i)
     return crules
@@ -413,6 +415,7 @@ cdef RuleOption convert_option(object option, to_or=False):
     cdef RuleOption coption
     coption.num = len(option)
     coption.items = <RuleItem*>malloc(sizeof(RuleItem) * coption.num)
+    cdef unsigned int i
     for i from 0<=i<coption.num:
         coption.items[i] = convert_item(option[i], to_or)
     return coption
@@ -460,6 +463,7 @@ cdef IgnoreTokens convert_ignore(object ignore, object tokens):
     cdef IgnoreTokens itokens
     itokens.num = len(ignore)
     itokens.tokens = <unsigned int*>malloc(sizeof(unsigned int)*itokens.num)
+    cdef unsigned int i
     for i from 0<=i<itokens.num:
         itokens.tokens[i] = tokens.index(ignore[i])
     return itokens
@@ -467,6 +471,7 @@ cdef IgnoreTokens convert_ignore(object ignore, object tokens):
 cdef object convert_ast_attrs(object ast_attrs, object rules, object tokens, AstAttrs** attrs):
     cdef AstAttrs* result = <AstAttrs*>malloc(sizeof(AstAttrs)*len(ast_attrs))
     attrs[0] = result
+    cdef unsigned int m
     for i from 0<=i<len(ast_attrs):
         # print ast_attrs[i],i
         if ast_attrs[i]['pass_single']:
@@ -500,6 +505,7 @@ cdef object convert_ast_attr(char* name, object ast_attr, object rules, object t
         ast_attr['type'] = [ast_attr['type']]
     attr.numtypes = len(ast_attr['type'])
     attr.types = <int*>malloc(sizeof(int)*attr.numtypes)
+    cdef unsigned int i
     for i from 0<=i<attr.numtypes:
         attr.types[i] = which_rt(ast_attr['type'][i], rules, tokens)
 
@@ -511,6 +517,7 @@ cdef PTokens convert_ptokens(object tokens):
     cdef PTokens ptokens
     ptokens.num = len(tokens) - 3 # don't include INDENT, DEDENT, and EOF
     ptokens.tokens = <PToken*>malloc(sizeof(PToken)*ptokens.num)
+    cdef unsigned int i
     for i from 0<=i<ptokens.num:
         if isinstance(tokens[i], ReToken):
             ptokens.num = -1
@@ -853,6 +860,7 @@ cdef object _get_ast(Grammar* grammar, int gid, cParseNode* node, object ast_cla
     if grammar.rules.rules[node.rule].keep_tree:
         obj._tree = convert_back_ptree(gid, node)
 
+    cdef unsigned int i, m
     for i from 0<=i<attrs.num:
         # print 'attr num', i, 'of', attrs.num
         child = start

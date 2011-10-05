@@ -97,17 +97,17 @@ struct cParseNode* _new_parsenode(unsigned int rule);
 
 struct cParseNode* _get_parse_tree(int start, struct Grammar* grammar, struct TokenStream* tokens, struct Error* error) {
     struct cParseNode* parent = parse_rule(start, grammar, tokens, error);
+    struct cParseNode *current, *tmp;
+    unsigned int m, ignore;
+    int rule = start;
     if (parent == NULL) {
         return NULL;
     }
-    struct cParseNode* current = parent->child;
-    struct cParseNode* tmp;
-    int m, ignore;
-    int rule = start;
+    current = parent->child;
     LOG("ignore any trailing ignores\n");
     while (tokens->at < tokens->num) {
         ignore = 0;
-        for (m=0;m<grammar->ignore.num;m++) {
+        for (m=0; m<grammar->ignore.num; m++) {
             if (tokens->tokens[tokens->at].which == grammar->ignore.tokens[m]) {
                 ignore = 1;
                 break;
@@ -142,9 +142,9 @@ struct cParseNode* _new_parsenode(unsigned int rule) {
 struct cParseNode* parse_rule(unsigned int rule, struct Grammar* grammar, struct TokenStream* tokens, struct Error* error) {
     struct cParseNode* node = _new_parsenode(rule);
     struct cParseNode* tmp;
-    int i;
+    unsigned int i, at;
     LOG("parsing rule #%d %s (token at %d)\n", rule, grammar->rules.rules[rule].name, tokens->at);
-    int at = tokens->at;
+    at = tokens->at;
     // log('parsing rule', rule)
     indent+=IND;;
     for (i=0; i < grammar->rules.rules[rule].num; i++) {
@@ -169,13 +169,13 @@ struct cParseNode* parse_rule(unsigned int rule, struct Grammar* grammar, struct
 
 // clean
 struct cParseNode* parse_children(unsigned int rule, struct RuleOption* option, struct Grammar* grammar, struct TokenStream* tokens, struct Error* error) {
-    LOG("parsing children of %d (token at %d)\n", rule, tokens->at);
     struct cParseNode* current = UNINITIALIZED;
     unsigned int i = 0, m = 0;
     unsigned int at = 0;
     struct cParseNode* tmp = NULL;
     struct RuleItem* item = NULL;
     int ignore;
+    LOG("parsing children of %d (token at %d)\n", rule, tokens->at);
     indent+=IND;
     for (i=0;i<option->num;i++) {
         item = &option->items[i];
@@ -332,7 +332,7 @@ struct cParseNode* parse_children(unsigned int rule, struct RuleOption* option, 
 
 struct cParseNode* check_special(unsigned int rule, struct RuleSpecial special, struct cParseNode* current, struct Grammar* grammar, struct TokenStream* tokens, struct Error* error) {
     struct cParseNode* tmp;
-    int at, i;
+    unsigned int at, i;
     LOG("special\n");
     indent+=IND;
     if (special.type == STAR) {
@@ -412,8 +412,9 @@ struct cParseNode* check_special(unsigned int rule, struct RuleSpecial special, 
         indent-=IND;
         return current;
     } else if (special.type == NOIGNORE) {
+        int before_ignore;
         LOG("no ignore (initial %d)\n", grammar->rules.rules[rule].dont_ignore);
-        int before_ignore = grammar->rules.rules[rule].dont_ignore;
+        before_ignore = grammar->rules.rules[rule].dont_ignore;
         at = tokens->at;
         grammar->rules.rules[rule].dont_ignore = 1;
         tmp = parse_children(rule, special.option, grammar, tokens, error);
@@ -463,6 +464,7 @@ struct cParseNode* check_special(unsigned int rule, struct RuleSpecial special, 
 }
 
 struct cParseNode* append_nodes(struct cParseNode* one, struct cParseNode* two) {
+    struct cParseNode* tmp;
     LOG("appending nodes; %d to %d\n", (int)one, (int)two);
     if (one == UNINITIALIZED) {
         LOG("good (noone)\n");
@@ -474,7 +476,7 @@ struct cParseNode* append_nodes(struct cParseNode* one, struct cParseNode* two) 
     } else if (two == UNINITIALIZED) {
         return one;
     }
-    struct cParseNode* tmp = two;
+    tmp = two;
     LOG("getting prev\n");
     while (tmp->prev != NULL) {
         tmp = tmp->prev;
@@ -506,6 +508,13 @@ struct Token* c_get_tokens(struct Grammar* grammar, char* text, int indent, stru
     struct Token* start = NULL;
     struct Token* current = NULL;
     struct Token* tmp = NULL;
+    struct PToken ptoken;
+    int ID_t = grammar->tokens.num;
+    int DD_t = grammar->tokens.num+1;
+
+    int res = 0;
+
+    int dirty;
 
     struct TokenState state;
     state.at = 0;
@@ -518,19 +527,10 @@ struct Token* c_get_tokens(struct Grammar* grammar, char* text, int indent, stru
     state.max_indents = 100;
     state.num_indents = 1;
 
-    struct PToken ptoken;
-
-    int ID_t = grammar->tokens.num;
-    int DD_t = grammar->tokens.num+1;
-
-    int res = 0;
-
-    int dirty;
-
     // printf("with text:: %s\n\n", text);
 
     while (state.at < state.ln) {
-        int i;
+        unsigned int i;
         dirty = 0;
         for (i=0;i<grammar->tokens.num;i++) {
             // printf("looking for token: %d\n", i);

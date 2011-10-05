@@ -139,7 +139,7 @@ struct Grammar {
 };
 
 struct Error {
-    int at;
+    unsigned int at;
     int reason;
     struct Token* token;
     char* text;
